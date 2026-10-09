@@ -1,0 +1,1771 @@
+openapi: 3.0.3
+info:
+  title: mall-admin 后台管理接口文档
+  description: >-
+    由 back 仓库 (master, dcaa93b) 源码分析生成。Controller 位于 com.macro.mall.controller，
+    对应 mall-admin/src/main/resources/application.yml 的 springdoc group-configs(group='default')。
+    统一返回体 CommonResult；分页数据封装 CommonPage。
+    鉴权：除 secure.ignored.urls 白名单（/admin/login、/admin/register、/admin/info、/admin/logout、/minio/upload、/aliyun/oss/policy）外均需 JWT（Header: Authorization，前缀 'Bearer '）。
+    端口：源码配置未见显式 server.port，此处按 Spring Boot 默认 8080 填写；无 context-path。
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: 本地开发环境（默认端口 8080，未见显式 server.port 配置）
+tags:
+  - {name: UmsAdmin, description: 后台用户管理}
+  - {name: UmsRole, description: 后台用户角色管理}
+  - {name: UmsMenu, description: 后台菜单管理}
+  - {name: UmsResource, description: 后台资源管理}
+  - {name: UmsResourceCategory, description: 后台资源分类管理}
+  - {name: UmsMemberLevel, description: 会员等级管理}
+  - {name: PmsBrand, description: 商品品牌管理}
+  - {name: PmsProduct, description: 商品管理}
+  - {name: PmsProductCategory, description: 商品分类管理}
+  - {name: PmsProductAttribute, description: 商品属性管理}
+  - {name: PmsProductAttributeCategory, description: 商品属性分类管理}
+  - {name: PmsSkuStock, description: sku商品库存管理}
+  - {name: OmsOrder, description: 订单管理}
+  - {name: OmsOrderReturnApply, description: 订单退货申请管理}
+  - {name: OmsOrderReturnReason, description: 退货原因管理}
+  - {name: OmsOrderSetting, description: 订单设置管理}
+  - {name: OmsCompanyAddress, description: 收货地址管理}
+  - {name: CmsPrefrenceArea, description: 商品优选管理}
+  - {name: CmsSubject, description: 商品专题管理}
+  - {name: Minio, description: MinIO对象存储管理}
+  - {name: Oss, description: Oss对象存储管理}
+  - {name: SmsCoupon, description: 优惠券管理}
+  - {name: SmsCouponHistory, description: 优惠券领取记录管理}
+  - {name: SmsFlashPromotion, description: 限时购活动管理}
+  - {name: SmsFlashPromotionSession, description: 限时购场次管理}
+  - {name: SmsFlashPromotionProductRelation, description: 限时购和商品关系管理}
+  - {name: SmsHomeAdvertise, description: 首页轮播广告管理}
+  - {name: SmsHomeBrand, description: 首页品牌管理}
+  - {name: SmsHomeNewProduct, description: 首页新品管理}
+  - {name: SmsHomeRecommendProduct, description: 首页人气推荐管理}
+  - {name: SmsHomeRecommendSubject, description: 首页专题推荐管理}
+security:
+  - bearerAuth: []
+paths:
+  /admin/register:
+    post:
+      tags: [UmsAdmin]
+      summary: 用户注册
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsAdminParam'}}}}
+      responses: {'200': {description: '注册成功返回 CommonResult<UmsAdmin>；失败返回 code=500', content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultUmsAdmin'}}}}}
+  /admin/login:
+    post:
+      tags: [UmsAdmin]
+      summary: 登录以后返回token
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsAdminLoginParam'}}}}
+      responses: {'200': {description: '成功返回 {token, tokenHead}；用户名或密码错误返回 code=404', content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultTokenMap'}}}}}
+  /admin/refreshToken:
+    get:
+      tags: [UmsAdmin]
+      summary: 刷新token
+      security: []
+      parameters:
+        - {name: Authorization, in: header, required: false, schema: {type: string}, description: 旧 token，取自 jwt.tokenHeader}
+      responses: {'200': {description: 'token 已过期返回 code=500(message=token已经过期！)', content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultTokenMap'}}}}}
+  /admin/info:
+    get:
+      tags: [UmsAdmin]
+      summary: 获取当前登录用户信息
+      security: []
+      description: 在白名单中，但 Principal 为空时返回 code=401
+      responses: {'200': {description: '返回 {username, menus, icon, roles}', content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultMap'}}}}}
+  /admin/logout:
+    post:
+      tags: [UmsAdmin]
+      summary: 登出功能
+      security: []
+      responses: {'200': {description: 登出结果, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResult'}}}}}
+  /admin/list:
+    get:
+      tags: [UmsAdmin]
+      summary: 根据用户名或姓名分页获取用户列表
+      parameters:
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页用户列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageUmsAdmin'}}}}}
+  /admin/{id}:
+    get:
+      tags: [UmsAdmin]
+      summary: 获取指定用户信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 用户信息, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultUmsAdmin'}}}}}
+  /admin/update/{id}:
+    post:
+      tags: [UmsAdmin]
+      summary: 修改指定用户信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsAdmin'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /admin/updatePassword:
+    post:
+      tags: [UmsAdmin]
+      summary: 修改指定用户密码
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UpdateAdminPasswordParam'}}}}
+      responses: {'200': {description: '成功返回状态；-1 提交参数不合法；-2 找不到该用户；-3 旧密码错误', content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /admin/delete/{id}:
+    post:
+      tags: [UmsAdmin]
+      summary: 删除指定用户信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /admin/updateStatus/{id}:
+    post:
+      tags: [UmsAdmin]
+      summary: 修改帐号状态
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: status, in: query, required: true, schema: {type: integer}, description: 帐号启用状态 0->禁用；1->启用}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /admin/role/update:
+    post:
+      tags: [UmsAdmin]
+      summary: 给用户分配角色
+      parameters:
+        - {name: adminId, in: query, required: true, schema: {type: integer, format: int64}}
+        - name: roleIds
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /admin/role/{adminId}:
+    get:
+      tags: [UmsAdmin]
+      summary: 获取指定用户的角色
+      parameters:
+        - {name: adminId, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 角色列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListUmsRole'}}}}}
+  /role/create:
+    post:
+      tags: [UmsRole]
+      summary: 添加角色
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsRole'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /role/update/{id}:
+    post:
+      tags: [UmsRole]
+      summary: 修改角色
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsRole'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /role/delete:
+    post:
+      tags: [UmsRole]
+      summary: 批量删除角色
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /role/listAll:
+    get:
+      tags: [UmsRole]
+      summary: 获取所有角色
+      responses: {'200': {description: 角色列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListUmsRole'}}}}}
+  /role/list:
+    get:
+      tags: [UmsRole]
+      summary: 根据角色名称分页获取角色列表
+      parameters:
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页角色列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageUmsRole'}}}}}
+  /role/updateStatus/{id}:
+    post:
+      tags: [UmsRole]
+      summary: 修改角色状态
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: status, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /role/listMenu/{roleId}:
+    get:
+      tags: [UmsRole]
+      summary: 获取角色相关菜单
+      parameters:
+        - {name: roleId, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 菜单列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListUmsMenu'}}}}}
+  /role/listResource/{roleId}:
+    get:
+      tags: [UmsRole]
+      summary: 获取角色相关资源
+      parameters:
+        - {name: roleId, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 资源列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListUmsResource'}}}}}
+  /role/allocMenu:
+    post:
+      tags: [UmsRole]
+      summary: 给角色分配菜单
+      parameters:
+        - {name: roleId, in: query, required: true, schema: {type: integer, format: int64}}
+        - name: menuIds
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /role/allocResource:
+    post:
+      tags: [UmsRole]
+      summary: 给角色分配资源
+      parameters:
+        - {name: roleId, in: query, required: true, schema: {type: integer, format: int64}}
+        - name: resourceIds
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /menu/create:
+    post:
+      tags: [UmsMenu]
+      summary: 添加后台菜单
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsMenu'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /menu/update/{id}:
+    post:
+      tags: [UmsMenu]
+      summary: 修改后台菜单
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsMenu'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /menu/{id}:
+    get:
+      tags: [UmsMenu]
+      summary: 根据ID获取菜单详情
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 菜单详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultUmsMenu'}}}}}
+  /menu/delete/{id}:
+    post:
+      tags: [UmsMenu]
+      summary: 根据ID删除后台菜单
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /menu/list/{parentId}:
+    get:
+      tags: [UmsMenu]
+      summary: 分页查询后台菜单
+      parameters:
+        - {name: parentId, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页菜单列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageUmsMenu'}}}}}
+  /menu/treeList:
+    get:
+      tags: [UmsMenu]
+      summary: 树形结构返回所有菜单列表
+      responses: {'200': {description: 菜单树, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListUmsMenuNode'}}}}}
+  /menu/updateHidden/{id}:
+    post:
+      tags: [UmsMenu]
+      summary: 修改菜单显示状态
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: hidden, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /resource/create:
+    post:
+      tags: [UmsResource]
+      summary: 添加后台资源
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsResource'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /resource/update/{id}:
+    post:
+      tags: [UmsResource]
+      summary: 修改后台资源
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsResource'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /resource/{id}:
+    get:
+      tags: [UmsResource]
+      summary: 根据ID获取资源详情
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 资源详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultUmsResource'}}}}}
+  /resource/delete/{id}:
+    post:
+      tags: [UmsResource]
+      summary: 根据ID删除后台资源
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /resource/list:
+    get:
+      tags: [UmsResource]
+      summary: 分页模糊查询后台资源
+      parameters:
+        - {name: categoryId, in: query, required: false, schema: {type: integer, format: int64}}
+        - {name: nameKeyword, in: query, required: false, schema: {type: string}}
+        - {name: urlKeyword, in: query, required: false, schema: {type: string}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页资源列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageUmsResource'}}}}}
+  /resource/listAll:
+    get:
+      tags: [UmsResource]
+      summary: 查询所有后台资源
+      responses: {'200': {description: 资源列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListUmsResource'}}}}}
+  /resourceCategory/listAll:
+    get:
+      tags: [UmsResourceCategory]
+      summary: 查询所有后台资源分类
+      responses: {'200': {description: 资源分类列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListUmsResourceCategory'}}}}}
+  /resourceCategory/create:
+    post:
+      tags: [UmsResourceCategory]
+      summary: 添加后台资源分类
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsResourceCategory'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /resourceCategory/update/{id}:
+    post:
+      tags: [UmsResourceCategory]
+      summary: 修改后台资源分类
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UmsResourceCategory'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /resourceCategory/delete/{id}:
+    post:
+      tags: [UmsResourceCategory]
+      summary: 根据ID删除后台资源分类
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /memberLevel/list:
+    get:
+      tags: [UmsMemberLevel]
+      summary: 查询所有会员等级
+      parameters:
+        - {name: defaultStatus, in: query, required: true, schema: {type: integer}, description: 是否为默认等级 0->否；1->是}
+      responses: {'200': {description: 会员等级列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListUmsMemberLevel'}}}}}
+  /brand/listAll:
+    get:
+      tags: [PmsBrand]
+      summary: 获取全部品牌列表
+      responses: {'200': {description: 品牌列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListPmsBrand'}}}}}
+  /brand/create:
+    post:
+      tags: [PmsBrand]
+      summary: 添加品牌
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PmsBrandParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /brand/update/{id}:
+    post:
+      tags: [PmsBrand]
+      summary: 更新品牌
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PmsBrandParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /brand/delete/{id}:
+    get:
+      tags: [PmsBrand]
+      summary: 删除品牌
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: '成功返回 code=200，data=null；失败 code=500', content: {application/json: {schema: {$ref: '#/components/schemas/CommonResult'}}}}}
+  /brand/list:
+    get:
+      tags: [PmsBrand]
+      summary: 根据品牌名称分页获取品牌列表
+      parameters:
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+        - {name: showStatus, in: query, required: false, schema: {type: integer}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+      responses: {'200': {description: 分页品牌列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPagePmsBrand'}}}}}
+  /brand/{id}:
+    get:
+      tags: [PmsBrand]
+      summary: 根据编号查询品牌信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 品牌详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultPmsBrand'}}}}}
+  /brand/delete/batch:
+    post:
+      tags: [PmsBrand]
+      summary: 批量删除品牌
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /brand/update/showStatus:
+    post:
+      tags: [PmsBrand]
+      summary: 批量更新显示状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: showStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /brand/update/factoryStatus:
+    post:
+      tags: [PmsBrand]
+      summary: 批量更新厂家制造商状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: factoryStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /product/create:
+    post:
+      tags: [PmsProduct]
+      summary: 创建商品
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PmsProductParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /product/updateInfo/{id}:
+    get:
+      tags: [PmsProduct]
+      summary: 根据商品id获取商品编辑信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 商品编辑信息, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultPmsProductResult'}}}}}
+  /product/update/{id}:
+    post:
+      tags: [PmsProduct]
+      summary: 更新商品
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PmsProductParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /product/list:
+    get:
+      tags: [PmsProduct]
+      summary: 查询商品
+      parameters:
+        - {name: publishStatus, in: query, required: false, schema: {type: integer, description: 上架状态}}
+        - {name: verifyStatus, in: query, required: false, schema: {type: integer, description: 审核状态}}
+        - {name: keyword, in: query, required: false, schema: {type: string, description: 商品名称模糊关键字}}
+        - {name: productSn, in: query, required: false, schema: {type: string}}
+        - {name: productCategoryId, in: query, required: false, schema: {type: integer, format: int64}}
+        - {name: brandId, in: query, required: false, schema: {type: integer, format: int64}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页商品列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPagePmsProduct'}}}}}
+  /product/simpleList:
+    get:
+      tags: [PmsProduct]
+      summary: 根据商品名称或货号模糊查询
+      parameters:
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+      responses: {'200': {description: 商品列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListPmsProduct'}}}}}
+  /product/update/verifyStatus:
+    post:
+      tags: [PmsProduct]
+      summary: 批量修改审核状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: verifyStatus, in: query, required: true, schema: {type: integer}}
+        - {name: detail, in: query, required: true, schema: {type: string}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /product/update/publishStatus:
+    post:
+      tags: [PmsProduct]
+      summary: 批量上下架商品
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: publishStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /product/update/recommendStatus:
+    post:
+      tags: [PmsProduct]
+      summary: 批量推荐商品
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: recommendStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /product/update/newStatus:
+    post:
+      tags: [PmsProduct]
+      summary: 批量设为新品
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: newStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /product/update/deleteStatus:
+    post:
+      tags: [PmsProduct]
+      summary: 批量修改删除状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: deleteStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productCategory/create:
+    post:
+      tags: [PmsProductCategory]
+      summary: 添加商品分类
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PmsProductCategoryParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productCategory/update/{id}:
+    post:
+      tags: [PmsProductCategory]
+      summary: 修改商品分类
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PmsProductCategoryParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productCategory/list/{parentId}:
+    get:
+      tags: [PmsProductCategory]
+      summary: 分页查询商品分类
+      parameters:
+        - {name: parentId, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页分类列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPagePmsProductCategory'}}}}}
+  /productCategory/{id}:
+    get:
+      tags: [PmsProductCategory]
+      summary: 根据id获取商品分类
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 分类详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultPmsProductCategory'}}}}}
+  /productCategory/delete/{id}:
+    post:
+      tags: [PmsProductCategory]
+      summary: 删除商品分类
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productCategory/update/navStatus:
+    post:
+      tags: [PmsProductCategory]
+      summary: 修改导航栏显示状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: navStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productCategory/update/showStatus:
+    post:
+      tags: [PmsProductCategory]
+      summary: 修改显示状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: showStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productCategory/list/withChildren:
+    get:
+      tags: [PmsProductCategory]
+      summary: 查询所有一级分类及子分类
+      responses: {'200': {description: 分类树, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListPmsProductCategoryWithChildrenItem'}}}}}
+  /productAttribute/list/{cid}:
+    get:
+      tags: [PmsProductAttribute]
+      summary: 根据分类查询属性列表或参数列表
+      parameters:
+        - {name: cid, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: type, in: query, required: true, description: 0表示属性，1表示参数, schema: {type: integer}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页属性列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPagePmsProductAttribute'}}}}}
+  /productAttribute/create:
+    post:
+      tags: [PmsProductAttribute]
+      summary: 添加商品属性信息
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PmsProductAttributeParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productAttribute/update/{id}:
+    post:
+      tags: [PmsProductAttribute]
+      summary: 修改商品属性信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PmsProductAttributeParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productAttribute/{id}:
+    get:
+      tags: [PmsProductAttribute]
+      summary: 查询单个商品属性
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 属性详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultPmsProductAttribute'}}}}}
+  /productAttribute/delete:
+    post:
+      tags: [PmsProductAttribute]
+      summary: 批量删除商品属性
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productAttribute/attrInfo/{productCategoryId}:
+    get:
+      tags: [PmsProductAttribute]
+      summary: 根据商品分类的id获取商品属性及属性分类
+      parameters:
+        - {name: productCategoryId, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 属性信息列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListProductAttrInfo'}}}}}
+  /productAttribute/category/create:
+    post:
+      tags: [PmsProductAttributeCategory]
+      summary: 添加商品属性分类
+      parameters:
+        - {name: name, in: query, required: true, schema: {type: string}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productAttribute/category/update/{id}:
+    post:
+      tags: [PmsProductAttributeCategory]
+      summary: 修改商品属性分类
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: name, in: query, required: true, schema: {type: string}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productAttribute/category/delete/{id}:
+    get:
+      tags: [PmsProductAttributeCategory]
+      summary: 删除单个商品属性分类
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /productAttribute/category/{id}:
+    get:
+      tags: [PmsProductAttributeCategory]
+      summary: 获取单个商品属性分类信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 属性分类详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultPmsProductAttributeCategory'}}}}}
+  /productAttribute/category/list:
+    get:
+      tags: [PmsProductAttributeCategory]
+      summary: 分页获取所有商品属性分类
+      parameters:
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页属性分类列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPagePmsProductAttributeCategory'}}}}}
+  /productAttribute/category/list/withAttr:
+    get:
+      tags: [PmsProductAttributeCategory]
+      summary: 获取所有商品属性分类及其下属性
+      responses: {'200': {description: 属性分类及属性列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListPmsProductAttributeCategoryItem'}}}}}
+  /sku/{pid}:
+    get:
+      tags: [PmsSkuStock]
+      summary: 根据商品ID及sku编码模糊搜索sku库存
+      parameters:
+        - {name: pid, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+      responses: {'200': {description: sku库存列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListPmsSkuStock'}}}}}
+  /sku/update/{pid}:
+    post:
+      tags: [PmsSkuStock]
+      summary: 批量更新sku库存信息
+      parameters:
+        - {name: pid, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/PmsSkuStock'}}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /order/list:
+    get:
+      tags: [OmsOrder]
+      summary: 查询订单
+      parameters:
+        - {name: orderSn, in: query, required: false, schema: {type: string}}
+        - {name: receiverKeyword, in: query, required: false, schema: {type: string}}
+        - {name: status, in: query, required: false, schema: {type: integer}, description: '订单状态：0->待付款；1->待发货；2->已发货；3->已完成；4->已关闭；5->无效订单'}
+        - {name: orderType, in: query, required: false, schema: {type: integer}}
+        - {name: sourceType, in: query, required: false, schema: {type: integer}}
+        - {name: createTime, in: query, required: false, schema: {type: string}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页订单列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageOmsOrder'}}}}}
+  /order/update/delivery:
+    post:
+      tags: [OmsOrder]
+      summary: 批量发货
+      requestBody: {required: true, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/OmsOrderDeliveryParam'}}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /order/update/close:
+    post:
+      tags: [OmsOrder]
+      summary: 批量关闭订单
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: note, in: query, required: true, schema: {type: string}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /order/delete:
+    post:
+      tags: [OmsOrder]
+      summary: 批量删除订单
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /order/{id}:
+    get:
+      tags: [OmsOrder]
+      summary: '获取订单详情：订单信息、商品信息、操作记录'
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 订单详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultOmsOrderDetail'}}}}}
+  /order/update/receiverInfo:
+    post:
+      tags: [OmsOrder]
+      summary: 修改收货人信息
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/OmsReceiverInfoParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /order/update/moneyInfo:
+    post:
+      tags: [OmsOrder]
+      summary: 修改订单费用信息
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/OmsMoneyInfoParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /order/update/note:
+    post:
+      tags: [OmsOrder]
+      summary: 备注订单
+      parameters:
+        - {name: id, in: query, required: true, schema: {type: integer, format: int64}}
+        - {name: note, in: query, required: true, schema: {type: string}}
+        - {name: status, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /returnApply/list:
+    get:
+      tags: [OmsOrderReturnApply]
+      summary: 分页查询退货申请
+      parameters:
+        - {name: id, in: query, required: false, schema: {type: integer, format: int64}, description: 服务单号}
+        - {name: receiverKeyword, in: query, required: false, schema: {type: string}}
+        - {name: status, in: query, required: false, schema: {type: integer}, description: '申请状态：0->待处理；1->退货中；2->已完成；3->已拒绝'}
+        - {name: createTime, in: query, required: false, schema: {type: string}}
+        - {name: handleMan, in: query, required: false, schema: {type: string}}
+        - {name: handleTime, in: query, required: false, schema: {type: string}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页退货申请列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageOmsOrderReturnApply'}}}}}
+  /returnApply/delete:
+    post:
+      tags: [OmsOrderReturnApply]
+      summary: 批量删除退货申请
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /returnApply/{id}:
+    get:
+      tags: [OmsOrderReturnApply]
+      summary: 获取退货申请详情
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 退货申请详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultOmsOrderReturnApplyResult'}}}}}
+  /returnApply/update/status/{id}:
+    post:
+      tags: [OmsOrderReturnApply]
+      summary: 修改退货申请状态
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/OmsUpdateStatusParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /returnReason/create:
+    post:
+      tags: [OmsOrderReturnReason]
+      summary: 添加退货原因
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/OmsOrderReturnReason'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /returnReason/update/{id}:
+    post:
+      tags: [OmsOrderReturnReason]
+      summary: 修改退货原因
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/OmsOrderReturnReason'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /returnReason/delete:
+    post:
+      tags: [OmsOrderReturnReason]
+      summary: 批量删除退货原因
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /returnReason/list:
+    get:
+      tags: [OmsOrderReturnReason]
+      summary: 分页查询退货原因
+      parameters:
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页退货原因列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageOmsOrderReturnReason'}}}}}
+  /returnReason/{id}:
+    get:
+      tags: [OmsOrderReturnReason]
+      summary: 获取单个退货原因详情信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 退货原因详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultOmsOrderReturnReason'}}}}}
+  /returnReason/update/status:
+    post:
+      tags: [OmsOrderReturnReason]
+      summary: 修改退货原因启用状态
+      parameters:
+        - {name: status, in: query, required: true, schema: {type: integer}}
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /orderSetting/{id}:
+    get:
+      tags: [OmsOrderSetting]
+      summary: 获取指定订单设置
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 订单设置, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultOmsOrderSetting'}}}}}
+  /orderSetting/update/{id}:
+    post:
+      tags: [OmsOrderSetting]
+      summary: 修改指定订单设置
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/OmsOrderSetting'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /companyAddress/list:
+    get:
+      tags: [OmsCompanyAddress]
+      summary: 获取所有收货地址
+      responses: {'200': {description: 收货地址列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListOmsCompanyAddress'}}}}}
+  /prefrenceArea/listAll:
+    get:
+      tags: [CmsPrefrenceArea]
+      summary: 获取所有商品优选
+      responses: {'200': {description: 商品优选列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListCmsPrefrenceArea'}}}}}
+  /subject/listAll:
+    get:
+      tags: [CmsSubject]
+      summary: 获取全部商品专题
+      responses: {'200': {description: 专题列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListCmsSubject'}}}}}
+  /subject/list:
+    get:
+      tags: [CmsSubject]
+      summary: 根据专题名称分页获取商品专题
+      parameters:
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+      responses: {'200': {description: 分页专题列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageCmsSubject'}}}}}
+  /minio/upload:
+    post:
+      tags: [Minio]
+      summary: 文件上传
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: {type: string, format: binary}
+              required: [file]
+      responses: {'200': {description: 上传结果, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultMinioUploadDto'}}}}}
+  /minio/delete:
+    post:
+      tags: [Minio]
+      summary: 文件删除
+      parameters:
+        - {name: objectName, in: query, required: true, schema: {type: string}}
+      responses: {'200': {description: '成功返回 code=200，data=null', content: {application/json: {schema: {$ref: '#/components/schemas/CommonResult'}}}}}
+  /aliyun/oss/policy:
+    get:
+      tags: [Oss]
+      summary: Oss上传签名生成
+      security: []
+      responses: {'200': {description: OSS 上传授权信息, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultOssPolicyResult'}}}}}
+  /aliyun/oss/callback:
+    post:
+      tags: [Oss]
+      summary: Oss上传成功回调
+      security: []
+      responses: {'200': {description: 回调结果, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultOssCallbackResult'}}}}}
+  /coupon/create:
+    post:
+      tags: [SmsCoupon]
+      summary: 添加优惠券
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsCouponParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /coupon/delete/{id}:
+    post:
+      tags: [SmsCoupon]
+      summary: 删除优惠券
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /coupon/update/{id}:
+    post:
+      tags: [SmsCoupon]
+      summary: 修改优惠券
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsCouponParam'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /coupon/list:
+    get:
+      tags: [SmsCoupon]
+      summary: 根据优惠券名称和类型分页获取优惠券列表
+      parameters:
+        - {name: name, in: query, required: false, schema: {type: string}}
+        - {name: type, in: query, required: false, schema: {type: integer}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页优惠券列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsCoupon'}}}}}
+  /coupon/{id}:
+    get:
+      tags: [SmsCoupon]
+      summary: 获取单个优惠券的详细信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 优惠券详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultSmsCouponParam'}}}}}
+  /couponHistory/list:
+    get:
+      tags: [SmsCouponHistory]
+      summary: 根据优惠券id，使用状态，订单编号分页获取领取记录
+      parameters:
+        - {name: couponId, in: query, required: false, schema: {type: integer, format: int64}}
+        - {name: useStatus, in: query, required: false, schema: {type: integer}}
+        - {name: orderSn, in: query, required: false, schema: {type: string}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页领取记录, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsCouponHistory'}}}}}
+  /flash/create:
+    post:
+      tags: [SmsFlashPromotion]
+      summary: 添加活动
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsFlashPromotion'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flash/update/{id}:
+    post:
+      tags: [SmsFlashPromotion]
+      summary: 编辑活动
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsFlashPromotion'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flash/delete/{id}:
+    post:
+      tags: [SmsFlashPromotion]
+      summary: 删除活动
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flash/update/status/{id}:
+    post:
+      tags: [SmsFlashPromotion]
+      summary: 修改上下线状态
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: status, in: query, required: true, schema: {type: integer}, description: 简单类型未加 @RequestParam，按查询参数绑定}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flash/{id}:
+    get:
+      tags: [SmsFlashPromotion]
+      summary: 获取活动详情
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 活动详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultSmsFlashPromotion'}}}}}
+  /flash/list:
+    get:
+      tags: [SmsFlashPromotion]
+      summary: 根据活动名称分页查询
+      parameters:
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页活动列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsFlashPromotion'}}}}}
+  /flashSession/create:
+    post:
+      tags: [SmsFlashPromotionSession]
+      summary: 添加场次
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsFlashPromotionSession'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flashSession/update/{id}:
+    post:
+      tags: [SmsFlashPromotionSession]
+      summary: 修改场次
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsFlashPromotionSession'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flashSession/update/status/{id}:
+    post:
+      tags: [SmsFlashPromotionSession]
+      summary: 修改启用状态
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: status, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flashSession/delete/{id}:
+    post:
+      tags: [SmsFlashPromotionSession]
+      summary: 删除场次
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flashSession/{id}:
+    get:
+      tags: [SmsFlashPromotionSession]
+      summary: 获取场次详情
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 场次详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultSmsFlashPromotionSession'}}}}}
+  /flashSession/list:
+    get:
+      tags: [SmsFlashPromotionSession]
+      summary: 获取全部场次
+      responses: {'200': {description: 场次列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListSmsFlashPromotionSession'}}}}}
+  /flashSession/selectList:
+    get:
+      tags: [SmsFlashPromotionSession]
+      summary: 获取全部可选场次及其数量
+      parameters:
+        - {name: flashPromotionId, in: query, required: false, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 可选场次列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultListSmsFlashPromotionSessionDetail'}}}}}
+  /flashProductRelation/create:
+    post:
+      tags: [SmsFlashPromotionProductRelation]
+      summary: 批量选择商品添加关联
+      requestBody: {required: true, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/SmsFlashPromotionProductRelation'}}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flashProductRelation/update/{id}:
+    post:
+      tags: [SmsFlashPromotionProductRelation]
+      summary: 修改关联信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsFlashPromotionProductRelation'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flashProductRelation/delete/{id}:
+    post:
+      tags: [SmsFlashPromotionProductRelation]
+      summary: 删除关联
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /flashProductRelation/{id}:
+    get:
+      tags: [SmsFlashPromotionProductRelation]
+      summary: 获取关联商品促销信息
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 关联信息, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultSmsFlashPromotionProductRelation'}}}}}
+  /flashProductRelation/list:
+    get:
+      tags: [SmsFlashPromotionProductRelation]
+      summary: 分页查询不同场次关联及商品信息
+      parameters:
+        - {name: flashPromotionId, in: query, required: true, schema: {type: integer, format: int64}}
+        - {name: flashPromotionSessionId, in: query, required: true, schema: {type: integer, format: int64}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页关联商品列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsFlashPromotionProduct'}}}}}
+  /home/advertise/create:
+    post:
+      tags: [SmsHomeAdvertise]
+      summary: 添加广告
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsHomeAdvertise'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/advertise/delete:
+    post:
+      tags: [SmsHomeAdvertise]
+      summary: 删除广告
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/advertise/update/status/{id}:
+    post:
+      tags: [SmsHomeAdvertise]
+      summary: 修改上下线状态
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: status, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/advertise/{id}:
+    get:
+      tags: [SmsHomeAdvertise]
+      summary: 获取广告详情
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      responses: {'200': {description: 广告详情, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultSmsHomeAdvertise'}}}}}
+  /home/advertise/update/{id}:
+    post:
+      tags: [SmsHomeAdvertise]
+      summary: 修改广告
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SmsHomeAdvertise'}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/advertise/list:
+    get:
+      tags: [SmsHomeAdvertise]
+      summary: 分页查询广告
+      parameters:
+        - {name: name, in: query, required: false, schema: {type: string}}
+        - {name: type, in: query, required: false, schema: {type: integer}}
+        - {name: endTime, in: query, required: false, schema: {type: string}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页广告列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsHomeAdvertise'}}}}}
+  /home/brand/create:
+    post:
+      tags: [SmsHomeBrand]
+      summary: 添加首页推荐品牌
+      requestBody: {required: true, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/SmsHomeBrand'}}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/brand/update/sort/{id}:
+    post:
+      tags: [SmsHomeBrand]
+      summary: 修改推荐品牌排序
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: sort, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/brand/delete:
+    post:
+      tags: [SmsHomeBrand]
+      summary: 批量删除推荐品牌
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/brand/update/recommendStatus:
+    post:
+      tags: [SmsHomeBrand]
+      summary: 批量修改推荐品牌状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: recommendStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/brand/list:
+    get:
+      tags: [SmsHomeBrand]
+      summary: 分页查询推荐品牌
+      parameters:
+        - {name: brandName, in: query, required: false, schema: {type: string}}
+        - {name: recommendStatus, in: query, required: false, schema: {type: integer}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页推荐品牌列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsHomeBrand'}}}}}
+  /home/newProduct/create:
+    post:
+      tags: [SmsHomeNewProduct]
+      summary: 添加首页新品
+      requestBody: {required: true, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/SmsHomeNewProduct'}}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/newProduct/update/sort/{id}:
+    post:
+      tags: [SmsHomeNewProduct]
+      summary: 修改首页新品排序
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: sort, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/newProduct/delete:
+    post:
+      tags: [SmsHomeNewProduct]
+      summary: 批量删除首页新品
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/newProduct/update/recommendStatus:
+    post:
+      tags: [SmsHomeNewProduct]
+      summary: 批量修改首页新品状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: recommendStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/newProduct/list:
+    get:
+      tags: [SmsHomeNewProduct]
+      summary: 分页查询首页新品
+      parameters:
+        - {name: productName, in: query, required: false, schema: {type: string}}
+        - {name: recommendStatus, in: query, required: false, schema: {type: integer}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页首页新品列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsHomeNewProduct'}}}}}
+  /home/recommendProduct/create:
+    post:
+      tags: [SmsHomeRecommendProduct]
+      summary: 添加首页推荐
+      requestBody: {required: true, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/SmsHomeRecommendProduct'}}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/recommendProduct/update/sort/{id}:
+    post:
+      tags: [SmsHomeRecommendProduct]
+      summary: 修改推荐排序
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: sort, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/recommendProduct/delete:
+    post:
+      tags: [SmsHomeRecommendProduct]
+      summary: 批量删除推荐
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/recommendProduct/update/recommendStatus:
+    post:
+      tags: [SmsHomeRecommendProduct]
+      summary: 批量修改推荐状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: recommendStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/recommendProduct/list:
+    get:
+      tags: [SmsHomeRecommendProduct]
+      summary: 分页查询推荐
+      parameters:
+        - {name: productName, in: query, required: false, schema: {type: string}}
+        - {name: recommendStatus, in: query, required: false, schema: {type: integer}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页推荐列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsHomeRecommendProduct'}}}}}
+  /home/recommendSubject/create:
+    post:
+      tags: [SmsHomeRecommendSubject]
+      summary: 添加首页推荐专题
+      requestBody: {required: true, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/SmsHomeRecommendSubject'}}}}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/recommendSubject/update/sort/{id}:
+    post:
+      tags: [SmsHomeRecommendSubject]
+      summary: 修改推荐排序
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, format: int64}}
+        - {name: sort, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/recommendSubject/delete:
+    post:
+      tags: [SmsHomeRecommendSubject]
+      summary: 批量删除推荐
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/recommendSubject/update/recommendStatus:
+    post:
+      tags: [SmsHomeRecommendSubject]
+      summary: 批量修改推荐状态
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: {type: array, items: {type: integer, format: int64}}
+        - {name: recommendStatus, in: query, required: true, schema: {type: integer}}
+      responses: {'200': {description: 受影响行数, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultInteger'}}}}}
+  /home/recommendSubject/list:
+    get:
+      tags: [SmsHomeRecommendSubject]
+      summary: 分页查询推荐
+      parameters:
+        - {name: subjectName, in: query, required: false, schema: {type: string}}
+        - {name: recommendStatus, in: query, required: false, schema: {type: integer}}
+        - {name: pageSize, in: query, required: false, schema: {type: integer, default: 5}}
+        - {name: pageNum, in: query, required: false, schema: {type: integer, default: 1}}
+      responses: {'200': {description: 分页推荐专题列表, content: {application/json: {schema: {$ref: '#/components/schemas/CommonResultCommonPageSmsHomeRecommendSubject'}}}}}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Header 名与前缀取自 jwt.tokenHeader / jwt.tokenHead（默认 Authorization / ''Bearer ''）'
+  schemas:
+    CommonResult:
+      type: object
+      description: 通用返回结果封装 com.macro.mall.common.api.CommonResult
+      properties:
+        code: {type: integer, format: int64, description: 状态码，成功 200}
+        message: {type: string}
+        data: {nullable: true, description: 数据封装}
+    CommonResultInteger:
+      allOf:
+        - $ref: '#/components/schemas/CommonResult'
+        - type: object
+          properties: {data: {type: integer}}
+    CommonResultString:
+      allOf:
+        - $ref: '#/components/schemas/CommonResult'
+        - type: object
+          properties: {data: {type: string}}
+    CommonResultMap:
+      allOf:
+        - $ref: '#/components/schemas/CommonResult'
+        - type: object
+          properties: {data: {type: object, additionalProperties: true}}
+    CommonResultTokenMap:
+      allOf:
+        - $ref: '#/components/schemas/CommonResult'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                token: {type: string}
+                tokenHead: {type: string}
+    CommonPage:
+      type: object
+      description: 通用分页数据封装 com.macro.mall.common.api.CommonPage
+      properties:
+        pageNum: {type: integer}
+        pageSize: {type: integer}
+        totalPage: {type: integer}
+        total: {type: integer, format: int64}
+        list: {type: array, items: {}}
+    CommonResultUmsAdmin:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/UmsAdmin'}}}]
+    CommonResultUmsMenu:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/UmsMenu'}}}]
+    CommonResultUmsResource:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/UmsResource'}}}]
+    CommonResultPmsBrand:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/PmsBrand'}}}]
+    CommonResultPmsProductResult:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/PmsProductResult'}}}]
+    CommonResultPmsProductCategory:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/PmsProductCategory'}}}]
+    CommonResultPmsProductAttribute:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/PmsProductAttribute'}}}]
+    CommonResultPmsProductAttributeCategory:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/PmsProductAttributeCategory'}}}]
+    CommonResultOmsOrderDetail:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/OmsOrderDetail'}}}]
+    CommonResultOmsOrderReturnApplyResult:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/OmsOrderReturnApplyResult'}}}]
+    CommonResultOmsOrderReturnReason:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/OmsOrderReturnReason'}}}]
+    CommonResultOmsOrderSetting:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/OmsOrderSetting'}}}]
+    CommonResultSmsCouponParam:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/SmsCouponParam'}}}]
+    CommonResultSmsFlashPromotion:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/SmsFlashPromotion'}}}]
+    CommonResultSmsFlashPromotionSession:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/SmsFlashPromotionSession'}}}]
+    CommonResultSmsFlashPromotionProductRelation:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/SmsFlashPromotionProductRelation'}}}]
+    CommonResultSmsHomeAdvertise:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/SmsHomeAdvertise'}}}]
+    CommonResultOssPolicyResult:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/OssPolicyResult'}}}]
+    CommonResultOssCallbackResult:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/OssCallbackResult'}}}]
+    CommonResultMinioUploadDto:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/MinioUploadDto'}}}]
+    CommonResultListUmsRole:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/UmsRole'}}}}]
+    CommonResultListUmsMenu:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/UmsMenu'}}}}]
+    CommonResultListUmsMenuNode:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/UmsMenuNode'}}}}]
+    CommonResultListUmsResource:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/UmsResource'}}}}]
+    CommonResultListUmsResourceCategory:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/UmsResourceCategory'}}}}]
+    CommonResultListUmsMemberLevel:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/UmsMemberLevel'}}}}]
+    CommonResultListPmsBrand:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/PmsBrand'}}}}]
+    CommonResultListPmsProduct:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/PmsProduct'}}}}]
+    CommonResultListPmsSkuStock:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/PmsSkuStock'}}}}]
+    CommonResultListPmsProductCategoryWithChildrenItem:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/PmsProductCategoryWithChildrenItem'}}}}]
+    CommonResultListPmsProductAttributeCategoryItem:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/PmsProductAttributeCategoryItem'}}}}]
+    CommonResultListProductAttrInfo:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductAttrInfo'}}}}]
+    CommonResultListOmsCompanyAddress:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/OmsCompanyAddress'}}}}]
+    CommonResultListCmsPrefrenceArea:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/CmsPrefrenceArea'}}}}]
+    CommonResultListCmsSubject:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/CmsSubject'}}}}]
+    CommonResultListSmsFlashPromotionSession:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/SmsFlashPromotionSession'}}}}]
+    CommonResultListSmsFlashPromotionSessionDetail:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {type: array, items: {$ref: '#/components/schemas/SmsFlashPromotionSessionDetail'}}}}]
+    CommonResultCommonPageUmsAdmin:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageUmsAdmin'}}}]
+    CommonResultCommonPageUmsRole:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageUmsRole'}}}]
+    CommonResultCommonPageUmsMenu:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageUmsMenu'}}}]
+    CommonResultCommonPageUmsResource:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageUmsResource'}}}]
+    CommonResultCommonPagePmsBrand:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPagePmsBrand'}}}]
+    CommonResultCommonPagePmsProduct:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPagePmsProduct'}}}]
+    CommonResultCommonPagePmsProductCategory:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPagePmsProductCategory'}}}]
+    CommonResultCommonPagePmsProductAttribute:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPagePmsProductAttribute'}}}]
+    CommonResultCommonPagePmsProductAttributeCategory:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPagePmsProductAttributeCategory'}}}]
+    CommonResultCommonPageOmsOrder:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageOmsOrder'}}}]
+    CommonResultCommonPageOmsOrderReturnApply:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageOmsOrderReturnApply'}}}]
+    CommonResultCommonPageOmsOrderReturnReason:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageOmsOrderReturnReason'}}}]
+    CommonResultCommonPageCmsSubject:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageCmsSubject'}}}]
+    CommonResultCommonPageSmsCoupon:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsCoupon'}}}]
+    CommonResultCommonPageSmsCouponHistory:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsCouponHistory'}}}]
+    CommonResultCommonPageSmsFlashPromotion:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsFlashPromotion'}}}]
+    CommonResultCommonPageSmsFlashPromotionProduct:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsFlashPromotionProduct'}}}]
+    CommonResultCommonPageSmsHomeAdvertise:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsHomeAdvertise'}}}]
+    CommonResultCommonPageSmsHomeBrand:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsHomeBrand'}}}]
+    CommonResultCommonPageSmsHomeNewProduct:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsHomeNewProduct'}}}]
+    CommonResultCommonPageSmsHomeRecommendProduct:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsHomeRecommendProduct'}}}]
+    CommonResultCommonPageSmsHomeRecommendSubject:
+      allOf: [{$ref: '#/components/schemas/CommonResult'}, {type: object, properties: {data: {$ref: '#/components/schemas/CommonPageSmsHomeRecommendSubject'}}}]
+    CommonPageUmsAdmin:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/UmsAdmin'}}}}]
+    CommonPageUmsRole:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/UmsRole'}}}}]
+    CommonPageUmsMenu:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/UmsMenu'}}}}]
+    CommonPageUmsResource:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/UmsResource'}}}}]
+    CommonPagePmsBrand:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/PmsBrand'}}}}]
+    CommonPagePmsProduct:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/PmsProduct'}}}}]
+    CommonPagePmsProductCategory:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/PmsProductCategory'}}}}]
+    CommonPagePmsProductAttribute:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/PmsProductAttribute'}}}}]
+    CommonPagePmsProductAttributeCategory:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/PmsProductAttributeCategory'}}}}]
+    CommonPageOmsOrder:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/OmsOrder'}}}}]
+    CommonPageOmsOrderReturnApply:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/OmsOrderReturnApply'}}}}]
+    CommonPageOmsOrderReturnReason:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/OmsOrderReturnReason'}}}}]
+    CommonPageCmsSubject:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/CmsSubject'}}}}]
+    CommonPageSmsCoupon:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsCoupon'}}}}]
+    CommonPageSmsCouponHistory:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsCouponHistory'}}}}]
+    CommonPageSmsFlashPromotion:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsFlashPromotion'}}}}]
+    CommonPageSmsFlashPromotionProduct:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsFlashPromotionProduct'}}}}]
+    CommonPageSmsHomeAdvertise:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsHomeAdvertise'}}}}]
+    CommonPageSmsHomeBrand:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsHomeBrand'}}}}]
+    CommonPageSmsHomeNewProduct:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsHomeNewProduct'}}}}]
+    CommonPageSmsHomeRecommendProduct:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsHomeRecommendProduct'}}}}]
+    CommonPageSmsHomeRecommendSubject:
+      allOf: [{$ref: '#/components/schemas/CommonPage'}, {type: object, properties: {list: {type: array, items: {$ref: '#/components/schemas/SmsHomeRecommendSubject'}}}}]
+    UmsAdminParam:
+      type: object
+      description: com.macro.mall.dto.UmsAdminParam 用户注册参数
+      required: [username, password]
+      properties:
+        username: {type: string, description: 用户名}
+        password: {type: string, description: 密码}
+        icon: {type: string, description: 用户头像}
+        email: {type: string, description: 邮箱}
+        nickName: {type: string, description: 用户昵称}
+        note: {type: string, description: 备注}
+    UmsAdminLoginParam:
+      type: object
+      description: com.macro.mall.dto.UmsAdminLoginParam 用户登录参数
+      required: [username, password]
+      properties:
+        username: {type: string, description: 用户名}
+        password: {type: string, description: 密码}
+    UpdateAdminPasswordParam:
+      type: object
+      description: com.macro.mall.dto.UpdateAdminPasswordParam
+      required: [username, oldPassword, newPassword]
+      properties:
+        username: {type: string, description: 用户名}
+        oldPassword: {type: string, description: 旧密码}
+        newPassword: {type: string, description: 新密码}
+    PmsBrandParam:
+      type: object
+      description: com.macro.mall.dto.PmsBrandParam 品牌请求参数
+      required: [name, logo]
+      properties:
+        name: {type: string, description: 品牌名称}
+        firstLetter: {type: string, description: 品牌首字母}
+        sort: {type: integer, description: 排序字段}
+        factoryStatus: {type: integer, description: 是否为厂家制造商}
+        showStatus: {type: integer, description: 是否进行显示}
+        logo: {type: string, description: 品牌logo}
+        bigPic: {type: string, description: 品牌大图}
+        brandStory: {type: string, description: 品牌故事}
+    PmsProductQueryParam:
+      type: object
+      description: com.macro.mall.dto.PmsProductQueryParam 商品查询参数
+      properties:
+        publishStatus: {type: integer, description: 上架状态}
+        verifyStatus: {type: integer, description: 审核状态}
+        keyword: {type: string, description: 商品名称模糊关键字}
+        productSn: {type: string, description: 商品货号}
+        productCategoryId: {type: integer, format: int64, description: 商品分类编号}
+        brandId: {type: integer, format: int64, description: 商品品牌编号}
+    PmsProductCategoryParam:
+      type: object
+      description: com.macro.mall.dto.PmsProductCategoryParam
+      required: [name]
+      properties:
+        parentId: {type: integer, format: int64, description: 父分类的编号}
+        name: {type: string, description: 商品分类名称}
+        productUnit: {type: string, description: 分类单位}
+        navStatus: {type: integer, description: 是否在导航栏显示}
+        showStatus: {type: integer, description: 是否进行显示}
+        sort: {type: integer, description: 排序}
+        icon: {type: string, description: 图标}
+        keywords: {type: string, description: 关键字}
+        description: {type: string, description: 描述}
+        productAttributeIdList: {type: array, items: {type: integer, format: int64}, description: 产品相关筛选属性集合}
+    PmsProductAttributeParam:
+      type: object
+      description: com.macro.mall.dto.PmsProductAttributeParam 商品属性参数
+      properties:
+        productAttributeCategoryId: {type: integer, format: int64, description: 属性分类ID}
+        name: {type: string, description: 属性名称}
+        selectType: {type: integer, description: '属性选择类型：0->唯一；1->单选；2->多选'}
+        inputType: {type: integer, description: '属性录入方式：0->手工录入；1->从列表中选取'}
+        inputList: {type: string, description: 可选值列表，以逗号隔开}
+        sort: {type: integer}
+        filterType: {type: integer, description: '分类筛选样式：0->普通；1->颜色'}
+        searchType: {type: integer, description: '检索类型：0->不需要检索；1->关键字检索；2->范围检索'}
+        relatedStatus: {type: integer, description: '相同属性产品是否关联：0->不关联；1->关联'}
+        handAddStatus: {type: integer, description: '是否支持手动新增：0->不支持；1->支持'}
+        type: {type: integer, description: '属性的类型：0->规格；1->参数'}
+    ProductAttrInfo:
+      type: object
+      description: com.macro.mall.dto.ProductAttrInfo 商品分类对应属性信息
+      properties:
+        attributeId: {type: integer, format: int64, description: 商品属性ID}
+        attributeCategoryId: {type: integer, format: int64, description: 商品属性分类ID}
+    OmsOrderQueryParam:
+      type: object
+      description: com.macro.mall.dto.OmsOrderQueryParam 订单查询参数
+      properties:
+        orderSn: {type: string, description: 订单编号}
+        receiverKeyword: {type: string, description: 收货人姓名/号码}
+        status: {type: integer, description: '订单状态：0->待付款；1->待发货；2->已发货；3->已完成；4->已关闭；5->无效订单'}
+        orderType: {type: integer, description: '订单类型：0->正常订单；1->秒杀订单'}
+        sourceType: {type: integer, description: '订单来源：0->PC订单；1->app订单'}
+        createTime: {type: string, description: 订单提交时间}
+    OmsOrderDeliveryParam:
+      type: object
+      description: com.macro.mall.dto.OmsOrderDeliveryParam 订单发货参数
+      properties:
+        orderId: {type: integer, format: int64, description: 订单id}
+        deliveryCompany: {type: string, description: 物流公司}
+        deliverySn: {type: string, description: 物流单号}
+    OmsReceiverInfoParam:
+      type: object
+      description: com.macro.mall.dto.OmsReceiverInfoParam 订单修改收货人信息参数
+      properties:
+        orderId: {type: integer, format: int64}
+        receiverName: {type: string}
+        receiverPhone: {type: string}
+        receiverPostCode: {type: string}
+        receiverDetailAddress: {type: string}
+        receiverProvince: {type: string}
+        receiverCity: {type: string}
+        receiverRegion: {type: string}
+        status: {type: integer}
+    OmsMoneyInfoParam:
+      type: object
+      description: com.macro.mall.dto.OmsMoneyInfoParam 修改订单费用信息参数
+      properties:
+        orderId: {type: integer, format: int64}
+        freightAmount: {type: number, description: 运费金额}
+        discountAmount: {type: number, description: 管理员后台调整订单所使用的折扣金额}
+        status: {type: integer}
+    OmsReturnApplyQueryParam:
+      type: object
+      description: com.macro.mall.dto.OmsReturnApplyQueryParam 订单退货申请查询参数
+      properties:
+        id: {type: integer, format: int64, description: 服务单号}
+        receiverKeyword: {type: string}
+        status: {type: integer, description: '申请状态：0->待处理；1->退货中；2->已完成；3->已拒绝'}
+        createTime: {type: string}
+        handleMan: {type: string}
+        handleTime: {type: string}
+    OmsUpdateStatusParam:
+      type: object
+      description: com.macro.mall.dto.OmsUpdateStatusParam 确认收货请求参数
+      properties:
+        id: {type: integer, format: int64, description: 服务单号}
+        companyAddressId: {type: integer, format: int64, description: 收货地址关联id}
+        returnAmount: {type: number, description: 确认退款金额}
+        handleNote: {type: string, description: 处理备注}
+        handleMan: {type: string, description: 处理人}
+        receiveNote: {type: string, description: 收货备注}
+        receiveMan: {type: string, description: 收货人}
+        status: {type: integer, description: '申请状态：1->退货中；2->已完成；3->已拒绝'}
+    OssPolicyResult:
+      type: object
+      description: com.macro.mall.dto.OssPolicyResult
+      properties:
+        accessKeyId: {type: string}
+        policy: {type: string}
+        signature: {type: string}
+        dir: {type: string}
+        host: {type: string}
+        callback: {type: string}
+    OssCallbackResult:
+      type: object
+      description: com.macro.mall.dto.OssCallbackResult
+      properties:
+        filename: {type: string}
+        size: {type: string}
+        mimeType: {type: string}
+        width: {type: string}
+        height: {type: string}
+    MinioUploadDto:
+      type: object
+      description: com.macro.mall.dto.MinioUploadDto
+      properties:
+        url: {type: string, description: 文件访问URL}
+        name: {type: string, description: 文件名称}
+    UmsMenuNode:
+      allOf: [{$ref: '#/components/schemas/UmsMenu'}, {type: object, properties: {children: {type: array, items: {$ref: '#/components/schemas/UmsMenuNode'}}, description: 子级菜单}}]
+    PmsProductCategoryWithChildrenItem:
+      allOf: [{$ref: '#/components/schemas/PmsProductCategory'}, {type: object, properties: {children: {type: array, items: {$ref: '#/components/schemas/PmsProductCategory'}}}}]
+    PmsProductAttributeCategoryItem:
+      allOf: [{$ref: '#/components/schemas/PmsProductAttributeCategory'}, {type: object, properties: {productAttributeList: {type: array, items: {$ref: '#/components/schemas/PmsProductAttribute'}}}}]
+    OmsOrderDetail:
+      allOf: [{$ref: '#/components/schemas/OmsOrder'}, {type: object, properties: {orderItemList: {type: array, items: {$ref: '#/components/schemas/OmsOrderItem'}}, historyList: {type: array, items: {$ref: '#/components/schemas/OmsOrderOperateHistory'}}}}]
+    OmsOrderReturnApplyResult:
+      allOf: [{$ref: '#/components/schemas/OmsOrderReturnApply'}, {type: object, properties: {companyAddress: {$ref: '#/components/schemas/OmsCompanyAddress'}}}]
+    SmsCouponParam:
+      allOf: [{$ref: '#/components/schemas/SmsCoupon'}, {type: object, properties: {productRelationList: {type: array, items: {$ref: '#/components/schemas/SmsCouponProductRelation'}}, productCategoryRelationList: {type: array, items: {$ref: '#/components/schemas/SmsCouponProductCategoryRelation'}}}}]
+    SmsFlashPromotionProduct:
+      allOf: [{$ref: '#/components/schemas/SmsFlashPromotionProductRelation'}, {type: object, properties: {product: {$ref: '#/components/schemas/PmsProduct'}}}]
+    SmsFlashPromotionSessionDetail:
+      allOf: [{$ref: '#/components/schemas/SmsFlashPromotionSession'}, {type: object, properties: {productCount: {type: integer, format: int64, description: 商品数量}}}]
+    PmsProductParam: {type: object, additionalProperties: true, description: 'com.macro.mall.dto.PmsProductParam 商品创建/更新参数（含 productAttributeValueList、skuStockList、productLadderList 等，字段较多未逐字段展开）'}
+    PmsProductResult: {type: object, additionalProperties: true, description: 'com.macro.mall.dto.PmsProductResult 商品编辑信息（继承 PmsProduct）'}
+    UmsAdmin: {type: object, additionalProperties: true, description: 'com.macro.mall.model.UmsAdmin（实体字段本次未逐字段展开）'}
+    UmsRole: {type: object, additionalProperties: true, description: 'com.macro.mall.model.UmsRole'}
+    UmsMenu: {type: object, additionalProperties: true, description: 'com.macro.mall.model.UmsMenu'}
+    UmsResource: {type: object, additionalProperties: true, description: 'com.macro.mall.model.UmsResource'}
+    UmsResourceCategory: {type: object, additionalProperties: true, description: 'com.macro.mall.model.UmsResourceCategory'}
+    UmsMemberLevel: {type: object, additionalProperties: true, description: 'com.macro.mall.model.UmsMemberLevel'}
+    PmsBrand: {type: object, additionalProperties: true, description: 'com.macro.mall.model.PmsBrand'}
+    PmsProduct: {type: object, additionalProperties: true, description: 'com.macro.mall.model.PmsProduct'}
+    PmsProductCategory: {type: object, additionalProperties: true, description: 'com.macro.mall.model.PmsProductCategory'}
+    PmsProductAttribute: {type: object, additionalProperties: true, description: 'com.macro.mall.model.PmsProductAttribute'}
+    PmsProductAttributeCategory: {type: object, additionalProperties: true, description: 'com.macro.mall.model.PmsProductAttributeCategory'}
+    PmsSkuStock: {type: object, additionalProperties: true, description: 'com.macro.mall.model.PmsSkuStock'}
+    OmsOrder: {type: object, additionalProperties: true, description: 'com.macro.mall.model.OmsOrder'}
+    OmsOrderItem: {type: object, additionalProperties: true, description: 'com.macro.mall.model.OmsOrderItem'}
+    OmsOrderOperateHistory: {type: object, additionalProperties: true, description: 'com.macro.mall.model.OmsOrderOperateHistory'}
+    OmsOrderReturnApply: {type: object, additionalProperties: true, description: 'com.macro.mall.model.OmsOrderReturnApply'}
+    OmsOrderReturnReason: {type: object, additionalProperties: true, description: 'com.macro.mall.model.OmsOrderReturnReason'}
+    OmsOrderSetting: {type: object, additionalProperties: true, description: 'com.macro.mall.model.OmsOrderSetting'}
+    OmsCompanyAddress: {type: object, additionalProperties: true, description: 'com.macro.mall.model.OmsCompanyAddress'}
+    CmsPrefrenceArea: {type: object, additionalProperties: true, description: 'com.macro.mall.model.CmsPrefrenceArea'}
+    CmsSubject: {type: object, additionalProperties: true, description: 'com.macro.mall.model.CmsSubject'}
+    SmsCoupon: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsCoupon'}
+    SmsCouponHistory: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsCouponHistory'}
+    SmsCouponProductRelation: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsCouponProductRelation'}
+    SmsCouponProductCategoryRelation: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsCouponProductCategoryRelation'}
+    SmsFlashPromotion: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsFlashPromotion'}
+    SmsFlashPromotionSession: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsFlashPromotionSession'}
+    SmsFlashPromotionProductRelation: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsFlashPromotionProductRelation'}
+    SmsHomeAdvertise: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsHomeAdvertise'}
+    SmsHomeBrand: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsHomeBrand'}
+    SmsHomeNewProduct: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsHomeNewProduct'}
+    SmsHomeRecommendProduct: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsHomeRecommendProduct'}
+    SmsHomeRecommendSubject: {type: object, additionalProperties: true, description: 'com.macro.mall.model.SmsHomeRecommendSubject'}
