@@ -1923,7 +1923,7 @@ components:
         productName: {type: string}
         productPic: {type: string}
         productSubTitle: {type: string}
-        productPrice: {type: string, description: 源码中为 String
+        productPrice: {type: string}
         createTime: {type: string, format: date-time}
     MemberReadHistory:
       type: object
