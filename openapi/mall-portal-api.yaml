@@ -345,7 +345,7 @@ paths:
               $ref: '#/components/schemas/OrderParam'
       responses:
         '200':
-          description: 成功 message 为「下单成功」，data 为 {order: OmsOrder}
+          description: 成功 message 为「下单成功」，data 为 OmsOrder
           content:
             application/json:
               schema:
