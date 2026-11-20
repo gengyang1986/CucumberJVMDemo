@@ -1,0 +1,364 @@
+openapi: 3.0.3
+info:
+  title: mall-search 搜索服务接口文档
+  description: >-
+    由 back 仓库（master，dcaa93b）源码分析生成。Controller 位于
+    com.macro.mall.search.controller.EsProductController，对应
+    mall-search/src/main/resources/application.yml 的 springdoc group-configs
+    （group='mall-search'，packages-to-scan=com.macro.mall.search.controller），
+    SpringDocConfig 中 info.title 为 mall搜索系统。
+    统一返回体为 CommonResult（com.macro.mall.common.api.CommonResult），分页数据由 Spring Data Page 转换为 CommonPage。
+    鉴权：mall-search 的 pom 仅依赖 mall-mbg 与 spring-boot-starter-data-elasticsearch，未引入 mall-security，
+    故本服务全部接口无鉴权要求（对比 mall-admin 的 secure.ignored.urls 白名单）。
+    端口：application.yml server.port=8081，application-dev.yml / application-prod.yml 未覆盖，无 context-path。
+    说明：Java 侧两个同名 delete 方法，operationId 分别取 deleteById / deleteBatch 以避免重名。
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: https://github.com/macrozheng/mall-learning
+servers:
+  - url: http://localhost:8081
+    description: 本地开发环境（server.port=8081，无 context-path）
+tags:
+  - name: EsProductController
+    description: 搜索商品管理
+
+paths:
+  /esProduct/importAll:
+    post:
+      tags: [EsProductController]
+      summary: 导入所有数据库中商品到ES
+      description: 全量把数据库商品同步到 ES 索引 pms，属耗时操作。
+      operationId: importAllList
+      responses:
+        '200':
+          description: 成功时 data 为导入的商品条数
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommonResultInteger'}
+
+  /esProduct/delete/{id}:
+    get:
+      tags: [EsProductController]
+      summary: 根据id删除商品
+      operationId: deleteById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 商品id
+          schema: {type: integer, format: int64}
+      responses:
+        '200':
+          description: 删除结果，成功时 data 为 null
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommonResult'}
+
+  /esProduct/delete/batch:
+    post:
+      tags: [EsProductController]
+      summary: 根据id批量删除商品
+      operationId: deleteBatch
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          description: 商品id列表，重复传参 ids=1&ids=2
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: {type: integer, format: int64}
+      responses:
+        '200':
+          description: 删除结果，成功时 data 为 null
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommonResult'}
+
+  /esProduct/create/{id}:
+    post:
+      tags: [EsProductController]
+      summary: 根据id创建商品
+      description: 从数据库读取商品并写入 ES 索引；服务层返回 null 时响应 code=500、message=操作失败、data=null。
+      operationId: create
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 商品id（mall-mbg pms_product.id）
+          schema: {type: integer, format: int64}
+      responses:
+        '200':
+          description: 成功时 data 为写入 ES 的商品文档
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommonResultEsProduct'}
+
+  /esProduct/search/simple:
+    get:
+      tags: [EsProductController]
+      summary: 简单搜索
+      description: 仅按关键词在 name/subTitle/keywords 范围检索。
+      operationId: searchSimple
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          description: 搜索关键词，不传则返回该索引下全部商品
+          schema: {type: string}
+        - name: pageNum
+          in: query
+          required: false
+          description: 页码，源码默认 0（Spring Data Page 为 0 基下标）
+          schema: {type: integer, format: int32, default: 0}
+        - name: pageSize
+          in: query
+          required: false
+          description: 每页条数
+          schema: {type: integer, format: int32, default: 5}
+      responses:
+        '200':
+          description: 分页搜索结果
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommonResultCommonPageEsProduct'}
+
+  /esProduct/search:
+    get:
+      tags: [EsProductController]
+      summary: 综合搜索、筛选、排序
+      description: 支持关键词、品牌、分类筛选，并可按相关度/新品/销量/价格排序。
+      operationId: search
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          description: 搜索关键词
+          schema: {type: string}
+        - name: brandId
+          in: query
+          required: false
+          description: 品牌id
+          schema: {type: integer, format: int64}
+        - name: productCategoryId
+          in: query
+          required: false
+          description: 商品分类id
+          schema: {type: integer, format: int64}
+        - name: pageNum
+          in: query
+          required: false
+          description: 页码，源码默认 0（Spring Data Page 为 0 基下标）
+          schema: {type: integer, format: int32, default: 0}
+        - name: pageSize
+          in: query
+          required: false
+          description: 每页条数
+          schema: {type: integer, format: int32, default: 5}
+        - name: sort
+          in: query
+          required: false
+          description: '排序字段:0->按相关度；1->按新品；2->按销量；3->价格从低到高；4->价格从高到低'
+          schema:
+            type: integer
+            format: int32
+            default: 0
+            enum: [0, 1, 2, 3, 4]
+      responses:
+        '200':
+          description: 分页搜索结果
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommonResultCommonPageEsProduct'}
+
+  /esProduct/recommend/{id}:
+    get:
+      tags: [EsProductController]
+      summary: 根据商品id推荐商品
+      description: 基于当前商品的相关度做推荐。
+      operationId: recommend
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 商品id
+          schema: {type: integer, format: int64}
+        - name: pageNum
+          in: query
+          required: false
+          description: 页码，源码默认 0（Spring Data Page 为 0 基下标）
+          schema: {type: integer, format: int32, default: 0}
+        - name: pageSize
+          in: query
+          required: false
+          description: 每页条数
+          schema: {type: integer, format: int32, default: 5}
+      responses:
+        '200':
+          description: 推荐商品分页结果
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommonResultCommonPageEsProduct'}
+
+  /esProduct/search/relate:
+    get:
+      tags: [EsProductController]
+      summary: 获取搜索的相关品牌、分类及筛选属性
+      description: 返回与关键词相关的品牌名称、分类名称及属性聚合结果，用于搜索页筛选项渲染。
+      operationId: searchRelatedInfo
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          description: 搜索关键词，不传时按全索引聚合
+          schema: {type: string}
+      responses:
+        '200':
+          description: 相关品牌/分类/属性聚合结果
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CommonResultEsProductRelatedInfo'}
+
+components:
+  schemas:
+    CommonResult:
+      type: object
+      description: 通用返回结果封装 com.macro.mall.common.api.CommonResult
+      properties:
+        code:
+          type: integer
+          format: int64
+          description: '状态码：200-操作成功；500-操作失败；404-参数校验失败；401-暂未登录或token已过期；403-没有相关权限'
+        message:
+          type: string
+          description: 提示信息
+        data:
+          nullable: true
+          description: 业务数据，具体类型见各接口引用的 schema
+    CommonResultInteger:
+      description: data 为整数（如导入条数）
+      allOf:
+        - $ref: '#/components/schemas/CommonResult'
+        - type: object
+          properties:
+            data:
+              type: integer
+              format: int32
+              description: 导入成功的商品条数
+    CommonResultEsProduct:
+      description: data 为单个 EsProduct
+      allOf:
+        - $ref: '#/components/schemas/CommonResult'
+        - type: object
+          properties:
+            data: {$ref: '#/components/schemas/EsProduct'}
+    CommonResultCommonPageEsProduct:
+      description: data 为 EsProduct 分页结果
+      allOf:
+        - $ref: '#/components/schemas/CommonResult'
+        - type: object
+          properties:
+            data: {$ref: '#/components/schemas/CommonPageEsProduct'}
+    CommonResultEsProductRelatedInfo:
+      description: data 为搜索关联信息
+      allOf:
+        - $ref: '#/components/schemas/CommonResult'
+        - type: object
+          properties:
+            data: {$ref: '#/components/schemas/EsProductRelatedInfo'}
+    CommonPage:
+      type: object
+      description: 通用分页封装 com.macro.mall.common.api.CommonPage
+      properties:
+        pageNum:
+          type: integer
+          format: int32
+          description: 当前页码（由 Spring Data Page.getNumber 得到，0 基下标）
+        pageSize:
+          type: integer
+          format: int32
+          description: 每页数量
+        totalPage:
+          type: integer
+          format: int32
+          description: 总页数
+        total:
+          type: integer
+          format: int64
+          description: 总条数
+        list:
+          type: array
+          description: 分页数据
+          items: {}
+    CommonPageEsProduct:
+      description: 商品分页结果
+      allOf:
+        - $ref: '#/components/schemas/CommonPage'
+        - type: object
+          properties:
+            list:
+              type: array
+              description: 商品列表
+              items: {$ref: '#/components/schemas/EsProduct'}
+    EsProduct:
+      type: object
+      description: 搜索商品文档，ES 索引 pms（@Document(indexName='pms')，shards=1、replicas=0）
+      properties:
+        id: {type: integer, format: int64, description: 商品id（ES @Id / _id）}
+        productSn: {type: string, description: 货号（Keyword）}
+        brandId: {type: integer, format: int64, description: 品牌id}
+        brandName: {type: string, description: 品牌名称（Keyword）}
+        productCategoryId: {type: integer, format: int64, description: 商品分类id}
+        productCategoryName: {type: string, description: 商品分类名称（Keyword）}
+        pic: {type: string, description: 商品图片地址}
+        name: {type: string, description: 商品名称（ik_max_word 分词）}
+        subTitle: {type: string, description: 副标题（ik_max_word 分词）}
+        keywords: {type: string, description: 关键词（ik_max_word 分词）}
+        price: {type: number, description: 价格（BigDecimal）}
+        sale: {type: integer, format: int32, description: 销量}
+        newStatus: {type: integer, format: int32, description: 新品状态标识}
+        recommandStatus: {type: integer, format: int32, description: 推荐状态标识}
+        stock: {type: integer, format: int32, description: 库存}
+        promotionType: {type: integer, format: int32, description: 促销类型}
+        sort: {type: integer, format: int32, description: 排序值}
+        attrValueList:
+          type: array
+          description: 商品属性值列表（ES Nested 字段）
+          items: {$ref: '#/components/schemas/EsProductAttributeValue'}
+    EsProductAttributeValue:
+      type: object
+      description: 搜索商品的属性值 com.macro.mall.search.domain.EsProductAttributeValue
+      properties:
+        id: {type: integer, format: int64, description: 属性值记录id}
+        productAttributeId: {type: integer, format: int64, description: 商品属性id}
+        value: {type: string, description: 属性值（Keyword）}
+        type: {type: integer, format: int32, description: '属性参数：0->规格；1->参数'}
+        name: {type: string, description: 属性名称（Keyword）}
+    EsProductRelatedInfo:
+      type: object
+      description: 搜索关联信息（品牌名称、分类名称及属性）
+      properties:
+        brandNames:
+          type: array
+          description: 相关品牌名称
+          items: {type: string}
+        productCategoryNames:
+          type: array
+          description: 相关商品分类名称
+          items: {type: string}
+        productAttrs:
+          type: array
+          description: 相关筛选属性
+          items: {$ref: '#/components/schemas/ProductAttr'}
+    ProductAttr:
+      type: object
+      description: 筛选属性（嵌套类 EsProductRelatedInfo.ProductAttr）
+      properties:
+        attrId: {type: integer, format: int64, description: 属性id}
+        attrName: {type: string, description: 属性名称}
+        attrValues:
+          type: array
+          description: 属性取值列表
+          items: {type: string}
