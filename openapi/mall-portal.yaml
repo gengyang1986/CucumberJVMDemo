@@ -10,7 +10,7 @@ info:
     url: https://github.com/macrozheng/mall-learning
 servers:
   - url: http://localhost:8085
-    description: 本地开发环境（application-dev.yml: server.port=8085，无 context-path）
+    description: 本地开发环境（application-dev.yml server.port=8085，无 context-path）
 tags:
   - {name: SSO, description: 会员登录注册管理（UmsMemberController）}
   - {name: Home, description: 首页内容管理（HomeController）}
