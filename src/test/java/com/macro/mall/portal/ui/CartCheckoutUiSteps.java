@@ -30,16 +30,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 前台商城 H5（mall-app-web，uni-app Vue3）「登录 → 购物车 → 去结算 → 提交订单」UI 步骤。
  *
  * <p>UI 驱动：Playwright（Java 版 com.microsoft.playwright），不使用 Selenium。
- * uni-app 编译到 H5 后 view/text/button 会渲染成 uni-view/uni-text/uni-button，源码里的 class
- * 会保留，因此本类按源码中的 class 与 input placeholder 定位，主要依据：
- * pages/public/login.vue、pages/cart/cart.vue、pages/order/createOrder.vue、pages.json（tabBar）。
  *
  * <p>本类自包含，且只在 @ui 场景下初始化（不会为接口场景拉起浏览器）。
  * 环境变量：WEB_BASE_URL、PORTAL_BASE_URL（或 BASE_URL）、MEMBER_USERNAME、MEMBER_PASSWORD；
  * 可选：UI_HEADLESS（默认 true）、UI_TIMEOUT_MS（默认 20000）、UI_PRODUCT_ID（默认 1）。
- *
- * <p>前置数据通过接口准备：/sso/login 取 token → 无默认地址则 /member/address/add →
- * 购物车为空则按 /cart/getProduct/{productId} 的 sku 调 /cart/add 加一件。
  */
 public class CartCheckoutUiSteps {
 
@@ -296,7 +290,8 @@ public class CartCheckoutUiSteps {
                 .post("/sso/login");
         assertThat(response.statusCode()).as("会员登录接口 HTTP 状态，响应：%s", response.asString()).isEqualTo(200);
         JsonPath json = response.jsonPath();
-        assertThat(json.get("code")).as("会员登录业务码，响应：%s", response.asString()).isEqualTo(200);
+        int loginCode = json.getInt("code");
+        assertThat(loginCode).as("会员登录业务码，响应：%s", response.asString()).isEqualTo(200);
         Object data = json.get("data");
         if (data instanceof Map) {
             Object token = ((Map<?, ?>) data).get("token");
@@ -334,7 +329,8 @@ public class CartCheckoutUiSteps {
                 .contentType(ContentType.JSON)
                 .body(body)
                 .post("/member/address/add");
-        assertThat(addResponse.jsonPath().get("code"))
+        int addressCode = addResponse.jsonPath().getInt("code");
+        assertThat(addressCode)
                 .as("准备默认收货地址失败，响应：%s", addResponse.asString())
                 .isEqualTo(200);
     }
@@ -370,7 +366,8 @@ public class CartCheckoutUiSteps {
                 .contentType(ContentType.JSON)
                 .body(item)
                 .post("/cart/add");
-        assertThat(addResponse.jsonPath().get("code"))
+        int addCartCode = addResponse.jsonPath().getInt("code");
+        assertThat(addCartCode)
                 .as("加购失败，响应：%s", addResponse.asString())
                 .isEqualTo(200);
     }
