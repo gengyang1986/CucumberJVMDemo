@@ -31,6 +31,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>UI 驱动：Playwright（Java 版 com.microsoft.playwright），不使用 Selenium。
  *
+ * <p>鉴权约定：mall-portal 的 JwtAuthenticationTokenFilter 要求请求头 Authorization 以
+ * jwt.tokenHead（application.yml 中为 "Bearer "）开头，否则 token 根本不会被解析，
+ * 受保护接口（/member/**、/cart/**）直接返回 401。因此本类登录后按 tokenHead + token 拼接请求头，
+ * tokenHead 优先取登录响应 data.tokenHead，缺失时兜底 "Bearer "。
+ *
  * <p>本类自包含，且只在 @ui 场景下初始化（不会为接口场景拉起浏览器）。
  * 环境变量：WEB_BASE_URL、PORTAL_BASE_URL（或 BASE_URL）、MEMBER_USERNAME、MEMBER_PASSWORD；
  * 可选：UI_HEADLESS（默认 true）、UI_TIMEOUT_MS（默认 20000）、UI_PRODUCT_ID（默认 1）。
@@ -39,6 +44,8 @@ public class CartCheckoutUiSteps {
 
     private static final int DEFAULT_TIMEOUT_MS = 20000;
     private static final long DEFAULT_PRODUCT_ID = 1L;
+    /** mall-portal application.yml 中 jwt.tokenHead 的默认值，注意末尾有一个空格 */
+    private static final String DEFAULT_TOKEN_HEAD = "Bearer ";
 
     private String webBaseUrl;
     private String portalBaseUrl;
@@ -109,9 +116,9 @@ public class CartCheckoutUiSteps {
 
     @Given("会员账号的购物车与收货地址数据已准备")
     public void prepareMemberData() {
-        String token = portalLogin();
-        ensureDefaultAddress(token);
-        ensureCartHasItem(token);
+        String authorization = portalLogin();
+        ensureDefaultAddress(authorization);
+        ensureCartHasItem(authorization);
     }
 
     @When("打开商城登录页并输入会员账号密码登录")
@@ -281,6 +288,11 @@ public class CartCheckoutUiSteps {
 
     // ==================== 接口辅助（仅准备数据，不做 UI 断言） ====================
 
+    /**
+     * 会员登录，返回可直接放入 Authorization 请求头的完整值（tokenHead + token）。
+     * mall-portal 的 JwtAuthenticationTokenFilter 只有在请求头以 tokenHead 开头时才解析 token，
+     * 因此不能只放裸 token。
+     */
     private String portalLogin() {
         Response response = RestAssured.given()
                 .baseUri(trimTrailingSlash(portalBaseUrl))
@@ -294,19 +306,54 @@ public class CartCheckoutUiSteps {
         assertThat(loginCode).as("会员登录业务码，响应：%s", response.asString()).isEqualTo(200);
         Object data = json.get("data");
         if (data instanceof Map) {
-            Object token = ((Map<?, ?>) data).get("token");
+            Map<?, ?> dataMap = (Map<?, ?>) data;
+            Object token = dataMap.get("token");
             assertThat(token).as("登录响应 data.token 为空，响应：%s", response.asString()).isNotNull();
-            return String.valueOf(token);
+            return withTokenHead(String.valueOf(token), dataMap.get("tokenHead"));
         }
         assertThat(data).as("登录响应 data 为空，响应：%s", response.asString()).isNotNull();
-        return String.valueOf(data);
+        return withTokenHead(String.valueOf(data), null);
     }
 
-    private void ensureDefaultAddress(String token) {
+    /**
+     * 拼接 Authorization 请求头：tokenHead + token（tokenHead 取登录响应 data.tokenHead，缺省 "Bearer "）。
+     * 已带前缀时原样返回，避免重复拼接成 "Bearer Bearer xxx"。
+     */
+    private static String withTokenHead(String token, Object tokenHeadFromResponse) {
+        String raw = token == null ? "" : token.trim();
+        if (raw.startsWith(DEFAULT_TOKEN_HEAD.trim())) {
+            return raw;
+        }
+        String head = tokenHeadFromResponse == null || String.valueOf(tokenHeadFromResponse).isBlank()
+                ? DEFAULT_TOKEN_HEAD
+                : String.valueOf(tokenHeadFromResponse);
+        return head + raw;
+    }
+
+    /** 前置接口若鉴权失败，直接抛出指向 Authorization 前缀的明确断言，避免后续步骤症状失真 */
+    private void assertAuthorized(Response response, String what) {
+        int status = response.statusCode();
+        Integer bodyCode = null;
+        try {
+            bodyCode = response.jsonPath().getInt("code");
+        } catch (RuntimeException ignored) {
+            // 响应体非 JSON 时只按 HTTP 状态判断
+        }
+        boolean unauthorized = status == 401 || status == 403
+                || (bodyCode != null && (bodyCode == 401 || bodyCode == 403));
+        assertThat(unauthorized)
+                .as("%s 返回未认证（HTTP %s，响应：%s）：Authorization 请求头必须是 tokenHead + token，"
+                        + "mall-portal 的 jwt.tokenHead 为 \"Bearer \"，裸 token 不会被 JwtAuthenticationTokenFilter 解析",
+                        what, status, response.asString())
+                .isFalse();
+    }
+
+    private void ensureDefaultAddress(String authorization) {
         Response listResponse = RestAssured.given()
                 .baseUri(trimTrailingSlash(portalBaseUrl))
-                .header("Authorization", token)
+                .header("Authorization", authorization)
                 .get("/member/address/list");
+        assertAuthorized(listResponse, "收货地址列表接口 /member/address/list");
         for (Map<String, Object> address : readList(listResponse.jsonPath(), "data")) {
             Object defaultStatus = address.get("defaultStatus");
             if (defaultStatus instanceof Number && ((Number) defaultStatus).intValue() == 1) {
@@ -325,7 +372,7 @@ public class CartCheckoutUiSteps {
 
         Response addResponse = RestAssured.given()
                 .baseUri(trimTrailingSlash(portalBaseUrl))
-                .header("Authorization", token)
+                .header("Authorization", authorization)
                 .contentType(ContentType.JSON)
                 .body(body)
                 .post("/member/address/add");
@@ -335,18 +382,19 @@ public class CartCheckoutUiSteps {
                 .isEqualTo(200);
     }
 
-    private void ensureCartHasItem(String token) {
+    private void ensureCartHasItem(String authorization) {
         Response listResponse = RestAssured.given()
                 .baseUri(trimTrailingSlash(portalBaseUrl))
-                .header("Authorization", token)
+                .header("Authorization", authorization)
                 .get("/cart/list");
+        assertAuthorized(listResponse, "购物车列表接口 /cart/list");
         if (!readList(listResponse.jsonPath(), "data").isEmpty()) {
             return;
         }
 
         Response productResponse = RestAssured.given()
                 .baseUri(trimTrailingSlash(portalBaseUrl))
-                .header("Authorization", token)
+                .header("Authorization", authorization)
                 .get("/cart/getProduct/{productId}", productId);
         Object skuId = firstSkuId(productResponse.jsonPath());
         assertThat(skuId)
@@ -362,7 +410,7 @@ public class CartCheckoutUiSteps {
 
         Response addResponse = RestAssured.given()
                 .baseUri(trimTrailingSlash(portalBaseUrl))
-                .header("Authorization", token)
+                .header("Authorization", authorization)
                 .contentType(ContentType.JSON)
                 .body(item)
                 .post("/cart/add");
