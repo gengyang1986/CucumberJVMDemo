@@ -7,6 +7,7 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.PlaywrightException;
+import com.microsoft.playwright.Tracing;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
 import io.cucumber.java.After;
@@ -20,6 +21,8 @@ import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +57,10 @@ public class CartCheckoutUiSteps {
     private boolean headless = true;
     private int timeoutMs = DEFAULT_TIMEOUT_MS;
     private long productId = DEFAULT_PRODUCT_ID;
+    private boolean captureScreenshot = false;
+    private boolean captureVideo = false;
+    private boolean captureTrace = false;
+    private boolean captureFailedOnly = true;
 
     private Playwright playwright;
     private Browser browser;
@@ -86,11 +93,16 @@ public class CartCheckoutUiSteps {
         headless = !"false".equalsIgnoreCase(firstNonBlank(System.getenv("UI_HEADLESS"), "true"));
         timeoutMs = parseInt(firstNonBlank(System.getenv("UI_TIMEOUT_MS")), DEFAULT_TIMEOUT_MS);
         productId = parseLong(firstNonBlank(System.getenv("UI_PRODUCT_ID")), DEFAULT_PRODUCT_ID);
+        captureScreenshot = envBool("CAPTURE_SCREENSHOT", false);
+        captureVideo = envBool("CAPTURE_VIDEO", false);
+        captureTrace = envBool("CAPTURE_TRACE", false);
+        captureFailedOnly = envBool("CAPTURE_FAILED_ONLY", true);
     }
 
     @After("@ui")
     public void closeBrowser(Scenario scenario) {
-        if (page != null && scenario.isFailed()) {
+        boolean shouldCapture = !captureFailedOnly || scenario.isFailed();
+        if (page != null && captureScreenshot && shouldCapture) {
             try {
                 byte[] shot = page.screenshot(new Page.ScreenshotOptions().setFullPage(true));
                 scenario.attach(shot, "image/png", "UI 失败截图");
@@ -98,7 +110,32 @@ public class CartCheckoutUiSteps {
                 // 截图失败不影响断言结论
             }
         }
+        if (context != null && captureTrace) {
+            try {
+                if (shouldCapture) {
+                    Path trace = Files.createTempFile("cucumber-trace-", ".zip");
+                    context.tracing().stop(new Tracing.StopOptions().setPath(trace));
+                    scenario.attach(Files.readAllBytes(trace), "application/zip", "UI 失败 trace");
+                    Files.deleteIfExists(trace);
+                } else {
+                    context.tracing().stop();
+                }
+            } catch (Exception ignored) {
+                // trace 采集失败不影响断言结论
+            }
+        }
+        Path video = page != null && page.video() != null ? page.video().path() : null;
         try { if (context != null) context.close(); } catch (Exception ignored) { /* 忽略清理异常 */ }
+        if (captureVideo && video != null && Files.exists(video)) {
+            try {
+                if (shouldCapture) {
+                    scenario.attach(Files.readAllBytes(video), "video/webm", "UI 失败视频");
+                }
+                Files.deleteIfExists(video);
+            } catch (Exception ignored) {
+                // 视频采集失败不影响断言结论
+            }
+        }
         try { if (browser != null) browser.close(); } catch (Exception ignored) { /* 忽略清理异常 */ }
         try { if (playwright != null) playwright.close(); } catch (Exception ignored) { /* 忽略清理异常 */ }
         page = null;
@@ -219,10 +256,28 @@ public class CartCheckoutUiSteps {
         browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
                 .setHeadless(headless)
                 .setArgs(List.of("--disable-dev-shm-usage")));
-        context = browser.newContext(new Browser.NewContextOptions()
+        Browser.NewContextOptions contextOptions = new Browser.NewContextOptions()
                 .setViewportSize(390, 844)
                 .setLocale("zh-CN")
-                .setIgnoreHTTPSErrors(true));
+                .setIgnoreHTTPSErrors(true);
+        if (captureVideo) {
+            try {
+                Path videoDir = Path.of(firstNonBlank(System.getenv("RESULT_DIR"), "/result"), "videos");
+                Files.createDirectories(videoDir);
+                contextOptions.setRecordVideoDir(videoDir);
+            } catch (Exception ignored) {
+                // 视频目录不可用时退化为不录像
+            }
+        }
+        context = browser.newContext(contextOptions);
+        if (captureTrace) {
+            try {
+                context.tracing().start(new Tracing.StartOptions()
+                        .setScreenshots(true).setSnapshots(true).setSources(true));
+            } catch (Exception ignored) {
+                // trace 不可用时继续执行
+            }
+        }
         page = context.newPage();
         page.setDefaultTimeout(timeoutMs);
         return page;
@@ -458,6 +513,13 @@ public class CartCheckoutUiSteps {
             result = result.substring(0, result.length() - 1);
         }
         return result;
+    }
+
+    private static boolean envBool(String name, boolean fallback) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) return fallback;
+        String v = value.trim().toLowerCase();
+        return "true".equals(v) || "1".equals(v) || "yes".equals(v) || "on".equals(v);
     }
 
     private static int parseInt(String value, int defaultValue) {
