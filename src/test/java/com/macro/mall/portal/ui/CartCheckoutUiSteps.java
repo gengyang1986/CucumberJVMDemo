@@ -163,8 +163,21 @@ public class CartCheckoutUiSteps {
         Page p = page();
         p.navigate(trimTrailingSlash(webBaseUrl) + "/#/pages/public/login",
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
-        firstVisible(p, "input[placeholder='请输入用户名']", "input[placeholder*='用户名']").fill(memberUsername);
-        firstVisible(p, "input[placeholder^='8-18位']", "input[type='password']").fill(memberPassword);
+
+        // uni-app H5：placeholder 渲染为独立的 div.uni-input-placeholder，真实 input 为 input.uni-input-input（无 placeholder 属性）
+        Locator usernameInput = firstVisible(p,
+                "uni-input input.uni-input-input",
+                ".input-item:has-text('用户名') input",
+                "input.uni-input-input");
+        usernameInput.fill(memberUsername);
+
+        // 密码框优先用 type=password 定位（H5 端 password 属性会映射为 input[type='password']）
+        Locator passwordInput = firstVisible(p,
+                "input[type='password']",
+                "uni-input input.uni-input-input >> nth=1",
+                ".input-item:has-text('密码') input");
+        passwordInput.fill(memberPassword);
+
         Locator loginButton = p.locator(".confirm-btn").first();
         waitForVisible(loginButton, "登录按钮");
         loginButton.click();
@@ -301,7 +314,7 @@ public class CartCheckoutUiSteps {
             try {
                 locator.waitFor(new Locator.WaitForOptions()
                         .setState(WaitForSelectorState.VISIBLE)
-                        .setTimeout(5000d));
+                        .setTimeout(1000d));
                 return locator;
             } catch (PlaywrightException ignored) {
                 // 继续尝试下一个候选选择器
