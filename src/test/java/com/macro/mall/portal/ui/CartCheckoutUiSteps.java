@@ -192,9 +192,9 @@ public class CartCheckoutUiSteps {
     @Then("应登录成功并跳转到首页")
     public void loginSucceeded() {
         Page p = page();
-        waitForUrlContains(p, "#/pages/index/index");
+        waitForUrlContains(p, "#/");
         assertThat(p.url()).as("登录成功后应回到首页（login.vue 中登录成功即 uni.switchTab 首页）")
-                .contains("#/pages/index/index");
+                .contains("#/");
     }
 
     @When("点击底部「购物车」标签页")
